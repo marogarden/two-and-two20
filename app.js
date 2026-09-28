@@ -110,13 +110,20 @@ function showWaiting(message){stopTimer();show('gameScreen');setGameMode(false);
 function weightedPick(pool,n){const available=[...new Set(pool)],out=[];while(out.length<n&&available.length){let total=available.reduce((a,w)=>a+(dirtyWords.has(w)?1:100),0),r=Math.random()*total,chosen=available[available.length-1];for(const w of available){r-=dirtyWords.has(w)?1:100;if(r<=0){chosen=w;break;}}out.push(chosen);available.splice(available.indexOf(chosen),1);}return out;}
 function deal(){selected=[];particleText='';phraseParts=[];const normal=[...baseWords,...sharedCustomWords].filter(w=>!secondPersonWords.includes(w));const second=secondPersonWords[Math.floor(Math.random()*secondPersonWords.length)];currentCards=[second,...weightedPick(normal,5)].sort(()=>Math.random()-.5);renderCards();renderParticles();renderCompose();}
 function renderCards(){$('cards').innerHTML=currentCards.map((w,i)=>`<button class="card" id="card${i}" onclick="toggleCard(${i})">${escapeHtml(w)}</button>`).join('')}
-function toggleCard(i){const p=selected.indexOf(i);if(p>=0){selected.splice(p,1);const idx=phraseParts.findIndex(x=>x.type==='word'&&x.index===i);if(idx>=0)phraseParts.splice(idx,1)}else{selected.push(i);phraseParts.push({type:'word',index:i,value:currentCards[i]})}document.querySelectorAll('.card').forEach((x,j)=>x.classList.toggle('selected',selected.includes(j)));renderCompose();sound('select')}
+function toggleCard(i){const p=selected.indexOf(i);if(p>=0){selected.splice(p,1);const idx=phraseParts.findIndex(x=>x.type==='word'&&x.index===i);if(idx>=0)phraseParts.splice(idx,1)}else{selected.push(i);phraseParts.push({type:'word',index:i,value:currentCards[i],particle:''})}document.querySelectorAll('.card').forEach((x,j)=>x.classList.toggle('selected',selected.includes(j)));renderCompose();sound('select')}
 function renderCompose(){
-  composeText=phraseParts.map(x=>x.value).join(' ');
+  composeText=phraseParts.map(x=>x.type==='word' ? x.value+(x.particle||'') : x.value).join(' ');
   $('compose').textContent=composeText||'ここに選んだ言葉が入ります'
 }
 function renderParticles(){$('particles').innerHTML=particles.map(p=>`<button class="particle" onclick="insertParticle('${p}')">${p}</button>`).join('')}
-function insertParticle(p){phraseParts.push({type:'particle',value:p});particleText=phraseParts.filter(x=>x.type==='particle').map(x=>x.value).join('');renderCompose();sound('select')}
+function insertParticle(p){
+  if(!phraseParts.length)return;
+  const last=[...phraseParts].reverse().find(x=>x.type==='word');
+  if(!last)return;
+  last.particle=(last.particle||'')+p;
+  particleText=phraseParts.filter(x=>x.type==='word').map(x=>x.particle||'').join('');
+  renderCompose();sound('select')
+}
 function startTimer(){stopTimer();timeLeft=60;renderTimer();timerId=setInterval(()=>{timeLeft--;renderTimer();if(timeLeft<=0){stopTimer();autoSendProposal();}},1000)}
 function stopTimer(){if(timerId){clearInterval(timerId);timerId=null}}
 function renderTimer(){const m=String(Math.floor(timeLeft/60)).padStart(2,'0'),sec=String(timeLeft%60).padStart(2,'0');$('timerText').textContent=`${m}:${sec}`;$('timerBox').classList.toggle('urgent',timeLeft<=10)}
