@@ -3,7 +3,7 @@ const secondPersonWords=['あなた','君','貴方','貴女','お前','そなた
 const dirtyWords=new Set(['うんこ','うんち','おなら','おしり','パンツ','おしっこ','ちんちん','おっぱい','おへそ','はなくそ','げっぷ','よだれ','おしりぺんぺん','ふんどし','トイレ','うんこまみれ','くさい','ぷりぷり','ぶりぶり']);
 let timerId=null,timeLeft=60;
 const particles=['は','が','を','に','へ','と','で','の','も','や','から','まで','だけ','しか','ね','よ'];
-let name='', selected=[], currentCards=[], proposal='', composeText='', particleText='', phraseParts=[];
+let name='', selected=[], currentCards=[], proposal='', composeText='', particleText='', phraseParts=[], lastParticle='';
 let peer=null, conn=null, isHost=false, roomCode='';
 let myScore=0, opponentScore=0, proposerIsHost=true, roundActive=false, answerSent=false, gameStarted=false;
 let sharedCustomWords=[];
@@ -108,21 +108,56 @@ function setGameMode(proposer){
 }
 function showWaiting(message){stopTimer();show('gameScreen');setGameMode(false);$('waitingMessage').textContent=message;$('waitingBox').style.display='block';}
 function weightedPick(pool,n){const available=[...new Set(pool)],out=[];while(out.length<n&&available.length){let total=available.reduce((a,w)=>a+(dirtyWords.has(w)?1:100),0),r=Math.random()*total,chosen=available[available.length-1];for(const w of available){r-=dirtyWords.has(w)?1:100;if(r<=0){chosen=w;break;}}out.push(chosen);available.splice(available.indexOf(chosen),1);}return out;}
-function deal(){selected=[];particleText='';phraseParts=[];const normal=[...baseWords,...sharedCustomWords].filter(w=>!secondPersonWords.includes(w));const second=secondPersonWords[Math.floor(Math.random()*secondPersonWords.length)];currentCards=[second,...weightedPick(normal,5)].sort(()=>Math.random()-.5);renderCards();renderParticles();renderCompose();}
+function deal(){selected=[];particleText='';phraseParts=[];lastParticle='';const normal=[...baseWords,...sharedCustomWords].filter(w=>!secondPersonWords.includes(w));const second=secondPersonWords[Math.floor(Math.random()*secondPersonWords.length)];currentCards=[second,...weightedPick(normal,5)].sort(()=>Math.random()-.5);renderCards();renderParticles();renderCompose();}
 function renderCards(){$('cards').innerHTML=currentCards.map((w,i)=>`<button class="card" id="card${i}" onclick="toggleCard(${i})">${escapeHtml(w)}</button>`).join('')}
-function toggleCard(i){const p=selected.indexOf(i);if(p>=0){selected.splice(p,1);const idx=phraseParts.findIndex(x=>x.type==='word'&&x.index===i);if(idx>=0)phraseParts.splice(idx,1)}else{selected.push(i);phraseParts.push({type:'word',index:i,value:currentCards[i],particle:''})}document.querySelectorAll('.card').forEach((x,j)=>x.classList.toggle('selected',selected.includes(j)));renderCompose();sound('select')}
+function toggleCard(i){
+  const p=selected.indexOf(i);
+  if(p>=0){
+    selected.splice(p,1);
+    const idx=phraseParts.findIndex(x=>x.type==='word'&&x.index===i);
+    if(idx>=0) phraseParts.splice(idx,1);
+  }else{
+    // 新しく選んだ単語は必ず文章の末尾へ追加する。
+    // 直前の単語に助詞が付いていても、その助詞を含めて前の位置を保持する。
+    selected.push(i);
+    phraseParts.push({type:'word',index:i,value:currentCards[i],particle:''});
+  }
+  lastParticle='';
+  syncCardSelection();
+  renderCompose();
+  sound('select');
+}
+function syncCardSelection(){document.querySelectorAll('.card').forEach((x,j)=>x.classList.toggle('selected',selected.includes(j)))}
 function renderCompose(){
   composeText=phraseParts.map(x=>x.type==='word' ? x.value+(x.particle||'') : x.value).join(' ');
-  $('compose').textContent=composeText||'ここに選んだ言葉が入ります'
+  $('compose').textContent=composeText||'ここに選んだ言葉が入ります';
+  renderParticleState();
 }
-function renderParticles(){$('particles').innerHTML=particles.map(p=>`<button class="particle" onclick="insertParticle('${p}')">${p}</button>`).join('')}
+function renderParticles(){
+  $('particles').innerHTML=particles.map(p=>`<button class="particle" onclick="insertParticle('${p}')">${p}</button>`).join('');
+}
+function renderParticleState(){
+  const box=$('particles');
+  if(!box)return;
+  const last=[...phraseParts].reverse().find(x=>x.type==='word');
+  box.querySelectorAll('.particle').forEach(btn=>btn.classList.remove('active'));
+  if(last && last.particle){
+    const btn=[...box.querySelectorAll('.particle')].find(b=>b.textContent===last.particle);
+    if(btn)btn.classList.add('active');
+  }
+}
 function insertParticle(p){
-  if(!phraseParts.length)return;
   const last=[...phraseParts].reverse().find(x=>x.type==='word');
   if(!last)return;
-  last.particle=(last.particle||'')+p;
+  // 助詞は直前に選んだ単語へ付ける。同じ助詞をもう一度押すと解除できる。
+  if(last.particle===p){
+    last.particle='';
+  }else{
+    last.particle=p;
+  }
   particleText=phraseParts.filter(x=>x.type==='word').map(x=>x.particle||'').join('');
-  renderCompose();sound('select')
+  renderCompose();
+  sound('select');
 }
 function startTimer(){stopTimer();timeLeft=60;renderTimer();timerId=setInterval(()=>{timeLeft--;renderTimer();if(timeLeft<=0){stopTimer();autoSendProposal();}},1000)}
 function stopTimer(){if(timerId){clearInterval(timerId);timerId=null}}
