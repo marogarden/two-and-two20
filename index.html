@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ふたりのプロポーズ</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="titleScreen" class="screen active"><div class="panel"><div class="logo">💍</div><div class="title">ふたりのプロポーズ</div><div class="sub">ランダムな言葉だけで、最高のプロポーズを。</div><button class="btn primary" onclick="goName()">はじめる</button></div></div>
+<div id="nameScreen" class="screen"><div class="panel"><div class="title">あなたの名前</div><div class="sub">ゲーム中に表示する名前です</div><input id="nameInput" class="input" maxlength="12" placeholder="名前を入力"><button class="btn primary" onclick="saveName()">次へ</button></div></div>
+<div id="roomScreen" class="screen"><div class="panel"><div class="title">ルーム</div><button class="btn primary" onclick="createRoom()">＋ ルームを作成</button><div class="sub">または</div><input id="roomInput" class="input" maxlength="8" placeholder="ルームコード"><button class="btn" onclick="joinRoom()">参加する</button><div id="roomInfo"></div></div></div>
+<div id="gameScreen" class="screen"><button class="gear top" onclick="toggleSettings()">⚙️</button><div class="panel"><div class="title">🎴 プロポーズを作ろう</div><div class="sub">好きなカードだけ選んで、好きな順番に。</div><div id="cards" class="cards"></div><div id="compose" class="compose">ここに選んだ言葉が入ります</div><div class="small">助詞は必要なときだけ追加できます</div><div id="particles" class="particles"></div><button class="btn primary send" onclick="sendProposal()">💌 送る</button><div id="settings" class="setting"><h3>⚙️ 設定</h3><label>単語を追加</label><input id="customInput" class="input" placeholder="好きな言葉を入力"><button class="btn" onclick="addCustomWord()">＋ 追加</button><div id="wordList" class="wordlist"></div><div class="toggle"><span>🔊 効果音</span><input id="soundToggle" type="checkbox" checked onchange="localStorage.sound=this.checked"></div></div></div></div>
+<div id="revealScreen" class="screen"><div class="stars"></div><div class="panel"><div class="mail">💌</div><div class="sub">あなたに言葉が届きました</div><div class="letter"><div id="receivedProposal" class="proposal"></div></div><button class="btn primary" onclick="showChoices()">開く</button></div></div>
+<div id="choiceScreen" class="screen"><div class="panel"><div class="title">あなたの返事は？</div><div id="choiceProposal" class="sub"></div><button class="btn primary choice" onclick="answer('marriage')">💍 結婚する</button><button class="btn danger choice" onclick="answer('breakup')">💔 別れよう</button></div></div>
+<div id="resultScreen" class="screen"><div id="resultStars" class="stars"></div><div class="panel"><div id="resultIcon" class="resultIcon"></div><div id="resultTitle" class="resultTitle"></div><div id="resultText" class="sub"></div><button class="btn" onclick="resetRound()">もう一度</button></div></div>
+<script src="app.js"></script>
+</body></html>
