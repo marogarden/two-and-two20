@@ -3,7 +3,7 @@ const secondPersonWords=['あなた','君','貴方','貴女','お前','そなた
 const dirtyWords=new Set(['うんこ','うんち','おなら','おしり','パンツ','おしっこ','ちんちん','おっぱい','おへそ','はなくそ','げっぷ','よだれ','おしりぺんぺん','ふんどし','トイレ','うんこまみれ','くさい','ぷりぷり','ぶりぶり']);
 let timerId=null,timeLeft=60;
 const particles=['は','が','を','に','へ','と','で','の','も','や','から','まで','だけ','しか','ね','よ'];
-let name='', selected=[], currentCards=[], proposal='';
+let name='', selected=[], currentCards=[], proposal='', composeText='';
 let peer=null, conn=null, isHost=false, roomCode='';
 let myScore=0, opponentScore=0, proposerIsHost=true, roundActive=false, answerSent=false, gameStarted=false;
 let sharedCustomWords=[];
@@ -111,9 +111,9 @@ function weightedPick(pool,n){const available=[...new Set(pool)],out=[];while(ou
 function deal(){selected=[];const normal=[...baseWords,...sharedCustomWords].filter(w=>!secondPersonWords.includes(w));const second=secondPersonWords[Math.floor(Math.random()*secondPersonWords.length)];currentCards=[second,...weightedPick(normal,5)].sort(()=>Math.random()-.5);renderCards();renderParticles();renderCompose();}
 function renderCards(){$('cards').innerHTML=currentCards.map((w,i)=>`<button class="card" id="card${i}" onclick="toggleCard(${i})">${escapeHtml(w)}</button>`).join('')}
 function toggleCard(i){const p=selected.indexOf(i);if(p>=0)selected.splice(p,1);else selected.push(i);document.querySelectorAll('.card').forEach((x,j)=>x.classList.toggle('selected',selected.includes(j)));renderCompose();sound('select')}
-function renderCompose(){$('compose').textContent=selected.length?selected.map(i=>currentCards[i]).join(' '):'ここに選んだ言葉が入ります'}
+function renderCompose(){composeText=selected.length?selected.map(i=>currentCards[i]).join(' '):'';$('compose').textContent=composeText||'ここに選んだ言葉が入ります'}
 function renderParticles(){$('particles').innerHTML=particles.map(p=>`<button class="particle" onclick="insertParticle('${p}')">${p}</button>`).join('')}
-function insertParticle(p){if(!selected.length)return;const el=$('compose');el.textContent=(el.textContent==='ここに選んだ言葉が入ります'?'':el.textContent)+p;sound('select')}
+function insertParticle(p){if(!selected.length)return;composeText=(composeText||selected.map(i=>currentCards[i]).join(' '))+p;$('compose').textContent=composeText;sound('select')}
 function startTimer(){stopTimer();timeLeft=60;renderTimer();timerId=setInterval(()=>{timeLeft--;renderTimer();if(timeLeft<=0){stopTimer();autoSendProposal();}},1000)}
 function stopTimer(){if(timerId){clearInterval(timerId);timerId=null}}
 function renderTimer(){const m=String(Math.floor(timeLeft/60)).padStart(2,'0'),sec=String(timeLeft%60).padStart(2,'0');$('timerText').textContent=`${m}:${sec}`;$('timerBox').classList.toggle('urgent',timeLeft<=10)}
@@ -121,7 +121,7 @@ function autoSendProposal(){if(!roundActive)return;if(!selected.length){selected
 function sendProposal(fromTimer=false){
   if(!selected.length){if(fromTimer)return;alert('まず言葉を1つ以上選んでください');return}
   stopTimer();
-  proposal=selected.map(i=>currentCards[i]).join(' ');answerSent=false;sound('send');
+  proposal=(composeText||selected.map(i=>currentCards[i]).join(' ')).trim();answerSent=false;sound('send');
   if(conn&&conn.open){conn.send({type:'proposal',proposal,proposerIsHost,senderName:name});showWaiting(fromTimer?'時間切れ！セリフを送信しました':'相手がプロポーズを受け取っています…');}
 }
 function showChoices(){sound('open');$('choiceProposal').textContent=proposal;show('choiceScreen')}
