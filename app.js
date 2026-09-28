@@ -2,7 +2,7 @@ const baseWords=['永遠に','マイダーリン','抱きしめる','おばあ�
 const particles=['は','が','を','に','へ','と','で','の','も','や','から','まで','だけ','しか','ね','よ'];
 let name='', selected=[], currentCards=[], proposal='';
 let peer=null, conn=null, isHost=false, myPeerId='', roomCode='';
-let myScore=0, opponentScore=0, proposerIsHost=true, roundActive=false, waitingForAnswer=false, resultWaiting=false;
+let myScore=0, opponentScore=0, proposerIsHost=true, roundActive=false, waitingForAnswer=false, resultWaiting=false, answerSent=false;
 const $=id=>document.getElementById(id);
 function show(id){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));$(id).classList.add('active');}
 function sound(type){if(localStorage.sound==='false')return;try{const c=new (window.AudioContext||window.webkitAudioContext)();const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);let f=type==='send'?520:type==='open'?660:type==='marriage'?880:180;o.frequency.value=f;o.type=type==='breakup'?'sawtooth':'sine';g.gain.setValueAtTime(.0001,c.currentTime);g.gain.exponentialRampToValueAtTime(.12,c.currentTime+.02);g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+(type==='marriage'?1:.22));o.start();o.stop(c.currentTime+(type==='marriage'?1:.22));}catch(e){}}
@@ -65,11 +65,19 @@ function handleMessage(msg){
     return;
   }
   if(msg.type==='answer'){
+    // 返事を受け取った側（プロポーズした側）にも確実に結果を反映
     waitingForAnswer=false;
+    answerSent=true;
     if(msg.answer==='marriage'){
       if(isHost===proposerIsHost) myScore++; else opponentScore++;
     }
     showResult(msg.answer,false);
+    if(conn&&conn.open) conn.send({type:'answerReceived', answer:msg.answer, scores:{host:isHost?myScore:opponentScore, guest:isHost?opponentScore:myScore}});
+    return;
+  }
+  if(msg.type==='answerReceived'){
+    // 返事を選んだ側にも、相手が結果を受け取ったことを通知
+    showResult(msg.answer,true);
     return;
   }
   if(msg.type==='next'){
@@ -81,7 +89,7 @@ function handleMessage(msg){
   }
 }
 function startRound(){
-  selected=[];proposal='';waitingForAnswer=false;
+  selected=[];proposal='';waitingForAnswer=false;answerSent=false;
   const amProposer=(isHost===proposerIsHost);
   if(amProposer){
     deal(); show('gameScreen'); setGameMode(true);
@@ -110,16 +118,20 @@ function insertParticle(p){if(!selected.length)return;const el=$('compose');el.t
 function sendProposal(){
   if(!selected.length){alert('まず言葉を1つ以上選んでください');return}
   proposal=selected.map(i=>currentCards[i]).join(' ');waitingForAnswer=true;sound('send');
-  if(conn&&conn.open){conn.send({type:'proposal',proposal,proposerIsHost});showWaiting('相手がプロポーズを受け取っています…');}
+  if(conn&&conn.open){conn.send({type:'proposal',proposal,proposerIsHost,senderName:name});showWaiting('相手がプロポーズを受け取っています…');}
   else{$('receivedProposal').textContent=proposal;$('revealText').textContent='あなたに言葉が届きました';show('revealScreen');}
 }
 function showChoices(){sound('open');$('choiceProposal').textContent=proposal;show('choiceScreen');updateScore()}
 function answer(type){
+  if(answerSent)return;
+  answerSent=true;
   sound(type);
   if(type==='marriage'){
     if(isHost===proposerIsHost) myScore++; else opponentScore++;
   }
-  if(conn&&conn.open) conn.send({type:'answer',answer:type,proposerIsHost});
+  if(conn&&conn.open){
+    conn.send({type:'answer',answer:type,proposerIsHost, senderName:name});
+  }
   showResult(type,true);
 }
 function showResult(type,isReceiver){
