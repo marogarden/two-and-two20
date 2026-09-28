@@ -118,7 +118,7 @@ function sendProposal(){
 function showChoices(){sound('open');$('choiceProposal').textContent=proposal;show('choiceScreen')}
 function answer(type){
   if(answerSent)return;answerSent=true;
-  if(isHost){processAnswer(type,proposerIsHost);}else if(conn&&conn.open){conn.send({type:'answer',answer,proposerIsHost});showWaiting('返事を送信しました。結果を待っています…');}
+  if(isHost){processAnswer(type,proposerIsHost);}else if(conn&&conn.open){conn.send({type:'answer',answer:type,proposerIsHost});showWaiting('返事を送信しました。結果を待っています…');}
 }
 function showResult(type){
   $('resultScreen').className='screen active '+type;
