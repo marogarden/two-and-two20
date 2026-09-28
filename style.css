@@ -5,3 +5,9 @@
 .timerBox{margin:10px auto 14px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:1.1rem}.timerBox strong{font-variant-numeric:tabular-nums;font-size:1.8rem;letter-spacing:.04em}.timerBox.urgent strong{font-size:2rem;animation:timerPulse .7s infinite alternate}@keyframes timerPulse{to{transform:scale(1.08)}}
 .timerBox{margin:10px auto 14px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:1.1rem}.timerBox strong{font-variant-numeric:tabular-nums;font-size:1.8rem;letter-spacing:.04em}.timerBox.urgent strong{font-size:2rem;animation:timerPulse .7s infinite alternate}@keyframes timerPulse{to{transform:scale(1.08)}}
 .particle.active{transform:translateY(-2px);box-shadow:0 0 0 2px rgba(255,255,255,.75) inset,0 4px 12px rgba(255,105,150,.28)}
+
+/* v18: 文章内の助詞を個別に外せる表示 */
+.phrase-item{display:inline-flex;align-items:center;gap:2px}
+.phrase-particle{border:0;background:transparent;padding:0 2px;min-width:32px;min-height:32px;border-radius:8px;cursor:pointer;color:inherit;font:inherit}
+.phrase-particle:hover{background:rgba(255,255,255,.08)}
+.phrase-particle:focus-visible{outline:2px solid currentColor;outline-offset:2px}
