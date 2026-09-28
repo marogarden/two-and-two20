@@ -1,4 +1,7 @@
-const baseWords=['永遠に','マイダーリン','抱きしめる','おばあちゃん','冷蔵庫','宇宙人','それでも','愛しの君','何度でも','そっと','追いかける','運命','奇跡','一生','君','あなた','愛する','守る','そばにいる','生まれ変わっても','未来','最後まで','ちなみに','だから','そして','でも','突然だけど','まったく関係ないけど','お風呂上がり','君の体温','二人きりで','ゴリラ','鳩','味噌汁','焼きそば','パンツ','寝癖','幽霊','死神','ブラックホール','月','火星','未来人','ゆいと','かえで','うんち','うんこ','ぎゅー','お腹触りたい'];
+const baseWords=['永遠に','マイダーリン','抱きしめる','おばあちゃん','冷蔵庫','宇宙人','それでも','愛しの君','何度でも','そっと','追いかける','運命','奇跡','一生','愛する','守る','そばにいる','生まれ変わっても','未来','最後まで','ちなみに','だから','そして','でも','突然だけど','まったく関係ないけど','お風呂上がり','君の体温','二人きりで','ゴリラ','鳩','味噌汁','焼きそば','パンツ','寝癖','幽霊','死神','ブラックホール','月','火星','未来人','うんち','うんこ','ぎゅー','お腹触りたい','愛','愛してる','大好き','永遠','約束','絆','幸せ','特別','大切','最愛','生涯','いつまでも','何年経っても','ずっと','かけがえのない','僕のすべて','僕の人生','赤い糸','奇跡の出会い','最愛の人','心から','この瞬間','あの日','あの瞬間','出会えてよかった','これからも','これから先も','この先ずっと','最後の瞬間まで','どんな未来でも','どんな時も','何があっても','たとえ離れても','世界が変わっても','選ぶ','支える','寄り添う','共に生きる','手を取り合う','隣にいる','おなら','おしり','おしっこ','ちんちん','おっぱい','おへそ','はなくそ','げっぷ','よだれ','おしりぺんぺん','ふんどし','トイレ','うんこまみれ','くさい','ぷりぷり','ぶりぶり']
+const secondPersonWords=['あなた','君','貴方','貴女','お前','そなた','汝','おぬし','そち','そこの人','そこのあなた','愛しの人','愛する人','最愛の人','運命の人','大切な人','特別な人','最愛のあなた','愛しのあなた','マイダーリン','マイハニー','マイエンジェル','我が愛しの人','我が伴侶','我が人生の相棒','未来の伴侶','生涯の伴侶','ゆいと','かえで'];
+const dirtyWords=new Set(['うんこ','うんち','おなら','おしり','パンツ','おしっこ','ちんちん','おっぱい','おへそ','はなくそ','げっぷ','よだれ','おしりぺんぺん','ふんどし','トイレ','うんこまみれ','くさい','ぷりぷり','ぶりぶり']);
+let timerId=null,timeLeft=60;
 const particles=['は','が','を','に','へ','と','で','の','も','や','から','まで','だけ','しか','ね','よ'];
 let name='', selected=[], currentCards=[], proposal='';
 let peer=null, conn=null, isHost=false, roomCode='';
@@ -48,7 +51,7 @@ function setupConnection(){
     }
   });
   conn.on('data',handleMessage);
-  conn.on('close',()=>{if(roundActive) showWaiting('相手との接続が切れました');});
+  conn.on('close',()=>{stopTimer();if(roundActive) showWaiting('相手との接続が切れました');});
 }
 function beginOnlineGame(){
   if(!isHost||!conn||!conn.open||gameStarted)return;
@@ -67,7 +70,7 @@ function handleMessage(msg){
   if(msg.type==='start'){
     gameStarted=true;myScore=isHost?msg.scores.host:msg.scores.guest;opponentScore=isHost?msg.scores.guest:msg.scores.host;proposerIsHost=msg.proposerIsHost;sharedCustomWords=Array.isArray(msg.customWords)?msg.customWords:[];roundActive=true;startRound();return;
   }
-  if(msg.type==='proposal'){
+  if(msg.type==='proposal'){stopTimer();
     proposal=msg.proposal;proposerIsHost=msg.proposerIsHost;answerSent=false;sound('open');$('receivedProposal').textContent=proposal;$('revealText').textContent=`${escapeHtml(msg.senderName||'相手')}から言葉が届きました`;show('revealScreen');return;
   }
   if(msg.type==='answer'){
@@ -96,24 +99,30 @@ function startRound(){
   selected=[];proposal='';answerSent=false;roundActive=true;
   const amProposer=(isHost===proposerIsHost);
   updateScore();
-  if(amProposer){deal();show('gameScreen');setGameMode(true);}else{showWaiting('相手がプロポーズのセリフを決めています');}
+  if(amProposer){deal();show('gameScreen');setGameMode(true);startTimer();}else{showWaiting('相手がプロポーズのセリフを決めています');}
 }
 function setGameMode(proposer){
   $('gameTitle').textContent=proposer?'🎴 プロポーズを作ろう':'💌 相手がプロポーズ中';
   $('gameSub').textContent=proposer?'好きなカードだけ選んで、好きな順番に。':'相手がプロポーズのセリフを決めています。しばらくお待ちください。';
   $('cards').style.display=proposer?'grid':'none';$('compose').style.display=proposer?'block':'none';$('particles').style.display=proposer?'flex':'none';$('sendBtn').style.display=proposer?'block':'none';$('waitingBox').style.display=proposer?'none':'block';
 }
-function showWaiting(message){show('gameScreen');setGameMode(false);$('waitingMessage').textContent=message;$('waitingBox').style.display='block';}
-function deal(){selected=[];const pool=[...baseWords,...sharedCustomWords];currentCards=[...new Set(pool)].sort(()=>Math.random()-.5).slice(0,6);renderCards();renderParticles();renderCompose();}
+function showWaiting(message){stopTimer();show('gameScreen');setGameMode(false);$('waitingMessage').textContent=message;$('waitingBox').style.display='block';}
+function weightedPick(pool,n){const available=[...new Set(pool)],out=[];while(out.length<n&&available.length){let total=available.reduce((a,w)=>a+(dirtyWords.has(w)?1:100),0),r=Math.random()*total,chosen=available[available.length-1];for(const w of available){r-=dirtyWords.has(w)?1:100;if(r<=0){chosen=w;break;}}out.push(chosen);available.splice(available.indexOf(chosen),1);}return out;}
+function deal(){selected=[];const normal=[...baseWords,...sharedCustomWords].filter(w=>!secondPersonWords.includes(w));const second=secondPersonWords[Math.floor(Math.random()*secondPersonWords.length)];currentCards=[second,...weightedPick(normal,5)].sort(()=>Math.random()-.5);renderCards();renderParticles();renderCompose();}
 function renderCards(){$('cards').innerHTML=currentCards.map((w,i)=>`<button class="card" id="card${i}" onclick="toggleCard(${i})">${escapeHtml(w)}</button>`).join('')}
 function toggleCard(i){const p=selected.indexOf(i);if(p>=0)selected.splice(p,1);else selected.push(i);document.querySelectorAll('.card').forEach((x,j)=>x.classList.toggle('selected',selected.includes(j)));renderCompose();sound('select')}
 function renderCompose(){$('compose').textContent=selected.length?selected.map(i=>currentCards[i]).join(' '):'ここに選んだ言葉が入ります'}
 function renderParticles(){$('particles').innerHTML=particles.map(p=>`<button class="particle" onclick="insertParticle('${p}')">${p}</button>`).join('')}
 function insertParticle(p){if(!selected.length)return;const el=$('compose');el.textContent=(el.textContent==='ここに選んだ言葉が入ります'?'':el.textContent)+p;sound('select')}
-function sendProposal(){
-  if(!selected.length){alert('まず言葉を1つ以上選んでください');return}
+function startTimer(){stopTimer();timeLeft=60;renderTimer();timerId=setInterval(()=>{timeLeft--;renderTimer();if(timeLeft<=0){stopTimer();autoSendProposal();}},1000)}
+function stopTimer(){if(timerId){clearInterval(timerId);timerId=null}}
+function renderTimer(){const m=String(Math.floor(timeLeft/60)).padStart(2,'0'),sec=String(timeLeft%60).padStart(2,'0');$('timerText').textContent=`${m}:${sec}`;$('timerBox').classList.toggle('urgent',timeLeft<=10)}
+function autoSendProposal(){if(!roundActive)return;if(!selected.length){selected=[Math.floor(Math.random()*currentCards.length)];renderCards();renderCompose();}sendProposal(true)}
+function sendProposal(fromTimer=false){
+  if(!selected.length){if(fromTimer)return;alert('まず言葉を1つ以上選んでください');return}
+  stopTimer();
   proposal=selected.map(i=>currentCards[i]).join(' ');answerSent=false;sound('send');
-  if(conn&&conn.open){conn.send({type:'proposal',proposal,proposerIsHost,senderName:name});showWaiting('相手がプロポーズを受け取っています…');}
+  if(conn&&conn.open){conn.send({type:'proposal',proposal,proposerIsHost,senderName:name});showWaiting(fromTimer?'時間切れ！セリフを送信しました':'相手がプロポーズを受け取っています…');}
 }
 function showChoices(){sound('open');$('choiceProposal').textContent=proposal;show('choiceScreen')}
 function answer(type){
