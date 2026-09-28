@@ -29,7 +29,12 @@ function setupConnection(){
   conn.on('open',()=>{
     $('roomInfo').innerHTML=`<div class="status">ROOM: ${roomCode}<br>🟢 ${name}<br>🟢 相手と接続しました</div><button class="btn primary" onclick="beginOnlineGame()">スタート</button>`;
     if(!isHost){$('roomInfo').querySelector('.btn').style.display='none';}
-    if(isHost) conn.send({type:'connected',name});
+    if(isHost){
+      conn.send({type:'connected',name});
+      $('roomInfo').innerHTML=`<div class="status">ROOM: ${roomCode}<br>🟢 ${name}<br>🟢 相手と接続しました</div><button class="btn primary" onclick="beginOnlineGame()">スタート</button>`;
+    }else{
+      conn.send({type:'joined',name});
+    }
   });
   conn.on('data',handleMessage);
   conn.on('close',()=>{if(roundActive) showWaiting('相手との接続が切れました');});
@@ -41,7 +46,18 @@ function beginOnlineGame(){
   startRound();
 }
 function handleMessage(msg){
-  if(msg.type==='connected') return;
+  if(msg.type==='connected'){
+    if(isHost){
+      $('roomInfo').innerHTML=`<div class="status">ROOM: ${roomCode}</div><div class="joinNotice">🟢 ${msg.name||'相手'} がルームに参加しました</div><div class="status">🟢 ${name}<br>🟢 ${msg.name||'相手'}</div><button class="btn primary" onclick="beginOnlineGame()">スタート</button>`;
+    }
+    return;
+  }
+  if(msg.type==='joined'){
+    if(isHost){
+      $('roomInfo').innerHTML=`<div class="status">ROOM: ${roomCode}</div><div class="joinNotice">🟢 ${msg.name||'相手'} がルームに参加しました</div><div class="status">🟢 ${name}<br>🟢 ${msg.name||'相手'}</div><button class="btn primary" onclick="beginOnlineGame()">スタート</button>`;
+    }
+    return;
+  }
   if(msg.type==='start'){myScore=0;opponentScore=0;proposerIsHost=msg.proposerIsHost;roundActive=true;startRound();return;}
   if(msg.type==='proposal'){
     proposal=msg.proposal; proposerIsHost=msg.proposerIsHost; waitingForAnswer=false;
